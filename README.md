@@ -75,6 +75,23 @@ Import pukal: tampal terus ke tab `Pengguna` dengan `Status_Akaun = Aktif`, `Eme
 
 Had kuasa: DIETETIK hanya boleh urus akaun `STAF`. Hanya ADMIN boleh urus akaun lain dan tukar peranan. Tiada siapa boleh ubah akaun sendiri. Menggantung akaun terus melog keluar pengguna itu.
 
+## Cetakan
+
+**Label bekas makanan (Pengusaha → tab Pesanan masuk)**
+- **Cetak label** (pukal, tapis ikut sesi) atau butang **Label** pada setiap pesanan.
+- Kandungan stiker: sesi makan, no. pesanan, nama, wad, no. telefon, menu (dengan kuantiti), tarikh & masa tempahan, catuan/berbayar.
+- Format kertas: A4 8 label (Avery L7165 / setara 99.1×67.7 mm), A4 10 label (L7173, 99.1×57 mm), A4 14 label (L7163, 99.1×38.1 mm), atau pencetak termal 100×50 mm.
+- **1 label setiap hidangan**: pesanan nasi + air jadi 2 label (Bekas 1/2, 2/2).
+- **Mula pada label ke-N**: guna helaian stiker yang sudah separuh terpakai.
+- **Laras kedudukan (mm)**: jika cetakan tersasar. Cetak satu helaian ujian atas kertas biasa, tindih dengan kertas stiker ke arah cahaya, kemudian laras. Tetapan disimpan untuk cetakan seterusnya.
+- Dalam tetingkap cetak: skala **100% / Actual size**, margin **None**, matikan **Headers and footers**.
+
+**Laporan tempahan (Dietetik & Admin → tab Laporan)**
+- Pilih julat tarikh (maksimum 92 hari) dan sesi, atau butang pantas Hari ini / 7 hari / Bulan ini.
+- Kandungan: ringkasan, mengikut sesi, mengikut menu (termasuk kuantiti catuan), mengikut wad, senarai terperinci (halaman landskap), ruang tandatangan.
+- **Cetak / simpan PDF**: pilih "Save as PDF" sebagai pencetak untuk simpan fail.
+- Untuk benarkan pengusaha juga, ubah `PEMBACA_LAPORAN` dalam `Code.gs`.
+
 ## Peraturan perniagaan (boleh ubah di atas `Code.gs`)
 
 - Menu hanya muncul kepada staf jika **Disahkan** DAN dimasukkan ke `Menu_Harian` untuk tarikh + sesi tersebut.
