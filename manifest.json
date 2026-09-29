@@ -1,7 +1,7 @@
 {
   "name": "Tempahan Makanan HKL",
   "short_name": "Makanan HKL",
-  "description": "Tempahan makanan kafeteria untuk kakitangan Hospital Kuala Lumpur",
+  "description": "Tempahan makanan kakitangan, Jabatan Dietetik & Sajian, Hospital Kuala Lumpur",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,9 +10,23 @@
   "theme_color": "#0F5B4E",
   "lang": "ms",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

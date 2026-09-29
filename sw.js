@@ -1,6 +1,6 @@
 // Service worker: cache kerangka app sahaja. Data API sentiasa dari rangkaian.
-const CACHE = 'hkl-makanan-v1';
-const ASET = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+const CACHE = 'hkl-makanan-v2'; // naikkan nombor ini setiap kali tukar ikon/logo
+const ASET = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASET)).then(() => self.skipWaiting()));
