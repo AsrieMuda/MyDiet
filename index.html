@@ -289,7 +289,7 @@ dialog::backdrop{ background:rgba(8,20,17,.55); }
   <header class="atas">
     <div id="jalurDemo" class="demo-jalur tersembunyi">Mod demo: data disimpan dalam pelayar ini sahaja</div>
     <div class="atas-dalam">
-      <div class="jenama"><img src="" alt="" id="logoAtas"><span>Makanan HKL<small>Dietetik & Sajian</small></span></div>
+      <div class="jenama"><img src="" alt="" id="logoAtas"><span>Diet On-Call HKL<small>Dietetik & Sajian</small></span></div>
       <div class="pengguna" id="infoPengguna"></div>
       <button class="btn-keluar" data-act="akaun">Akaun</button>
     </div>
@@ -305,7 +305,7 @@ dialog::backdrop{ background:rgba(8,20,17,.55); }
 <script>
 /* ================= KONFIGURASI ================= */
 const CONFIG = {
-  API_URL: '' // Pilihan B (GitHub Pages): tampal URL Web App (…/exec). Pilihan A (dalam Apps Script): biarkan kosong.
+  API_URL: 'https://script.google.com/macros/s/AKfycbylB4HlsI3jbDm_AwAM1efsp0Py5Bf2Bi8bnqYjT4Ispu5UNqBpnUJ98FAaKsTmAOyN/exec' // Pilihan B (GitHub Pages): tampal URL Web App (…/exec). Pilihan A (dalam Apps Script): biarkan kosong.
 };
 
 const SESI = ['Sarapan', 'Makan Tengah Hari', 'Minum Petang', 'Makan Malam'];
@@ -407,7 +407,7 @@ function paparLogin(idIsi = '') {
   skrin(`
       <img class="logo-utama" src="${LOGO_IKON}" alt="Logo Jabatan Dietetik & Sajian">
       <p class="kecil" style="margin:0 0 4px;font-weight:600">Jabatan Dietetik & Sajian, Hospital Kuala Lumpur</p>
-      <h1>Tempahan makanan kakitangan</h1>
+      <h1>Tempahan Diet On-Call</h1>
       <p>Log masuk dengan ID staf dan kata laluan anda.</p>
       <form class="borang" id="fLogin">
         <label class="medan">ID staf<input name="id" autocomplete="username" autocapitalize="characters" required value="${esc(idIsi)}"></label>
@@ -1250,7 +1250,7 @@ function htmlLaporan({ dari, hingga, sesi, senarai }) {
   const kini = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'short', timeStyle: 'short' }).format(new Date());
   return `<div class="laporan">
     <header class="lap-kepala">
-      <div class="lap-atas"><img src="${LOGO_LAPORAN}" alt="Jabatan Dietetik & Sajian, Hospital Kuala Lumpur"><h2>Laporan Tempahan Makanan Kakitangan</h2></div>
+      <div class="lap-atas"><img src="${LOGO_LAPORAN}" alt="Jabatan Dietetik & Sajian, Hospital Kuala Lumpur"><h2>Laporan Tempahan Diet On-Call HKL</h2></div>
       <table class="lap-meta"><tr><td>Tempoh</td><td>${tempoh}</td><td>Sesi</td><td>${esc(sesi)}</td></tr>
         <tr><td>Dijana oleh</td><td>${esc(S.user.Nama)}</td><td>Tarikh jana</td><td>${kini}</td></tr></table>
     </header>
