@@ -16,7 +16,7 @@ Frontend statik (GitHub Pages) + backend Google Apps Script + Google Sheets. Kos
 1. **Google Sheet** — buat Sheet baharu, contoh `DB_Tempahan_Makanan_HKL`.
 2. **Apps Script** — Extensions > Apps Script > padam kod asal > tampal `Code.gs` > Save.
 3. **Setup** — pilih fungsi `setup` > Run > benarkan akses (Sheets + hantar emel). 5 tab dicipta dengan 4 akaun contoh, kata laluan `Demo1234`: A001 Pentadbir, P001, D001, S001. Tukar kata laluan akaun ini segera melalui menu **Akaun**.
-   > Jika pernah jalankan `setup()` versi lama, padam tab `Pengguna` dahulu (lajurnya sudah berubah).
+   > Jika pernah jalankan `setup()` versi lama, padam tab `Pengguna` dahulu (lajurnya sudah berubah). Tab `Daftar_Menu` tidak perlu dipadam: jalankan `setup()` semula untuk tambah lajur `Jenis_Menu` dan `Keterangan` di hujung.
 
 ### Pilihan A — Semua dalam Apps Script (paling mudah, tiada GitHub)
 4. Dalam editor Apps Script: **+ > HTML** → namakan `Index` (tanpa .html) → padam isi asal → tampal **keseluruhan** `index.html` → Save.
@@ -28,7 +28,7 @@ Kekangan: URL panjang (`script.google.com/...`), ada jalur "This application was
 ### Pilihan B — GitHub Pages (PWA penuh, disyorkan untuk guna sebenar)
 4. **Deploy > New deployment > Web app** — Execute as: **Me**, Who has access: **Anyone** → salin URL `/exec`.
 5. Dalam `index.html`, isi `CONFIG.API_URL: 'https://script.google.com/macros/s/.../exec'`.
-6. Repo GitHub baharu → upload `index.html`, `manifest.json`, `sw.js`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png` → Settings > Pages > Branch `main` / root → Save.
+6. Repo GitHub baharu → upload `index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png`, `favicon.png` → Settings > Pages > Branch `main` / root → Save.
 7. Buka `https://<username>.github.io/<repo>/` di telefon → **Add to Home Screen**. App dibuka penuh skrin tanpa bar pelayar.
 
 `README.md` dan `Code.gs` tidak perlu dinaikkan ke GitHub (Code.gs tinggal dalam Apps Script sahaja).
@@ -75,6 +75,22 @@ Import pukal: tampal terus ke tab `Pengguna` dengan `Status_Akaun = Aktif`, `Eme
 
 Had kuasa: DIETETIK hanya boleh urus akaun `STAF`. Hanya ADMIN boleh urus akaun lain dan tukar peranan. Tiada siapa boleh ubah akaun sendiri. Menggantung akaun terus melog keluar pengguna itu.
 
+## Logo
+
+- Ikon app: `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png`, `favicon.png` (dijana dari `ikon-1024.png`).
+- Logo penuh Jabatan Dietetik & Sajian: `logo-jabatan.png` (latar telus) dan `logo-jabatan-putih.png`, untuk surat, poster, slaid. Tidak perlu dinaikkan ke GitHub.
+- Logo di skrin log masuk, header dan laporan sudah dibenam dalam `index.html` (berfungsi juga dalam Apps Script).
+- Tukar logo pada masa depan: ganti fail ikon (nama & saiz sama) dan naikkan versi `CACHE` dalam `sw.js` (cth. `hkl-makanan-v3`). Pengguna yang sudah pasang ke skrin utama perlu buang dan tambah semula.
+
+## Tarikh & lokasi tempahan (pegawai oncall)
+
+- Setiap kali app dibuka, kakitangan pilih dahulu **tarikh hidangan** (hari ini hingga 7 hari ke hadapan) dan **lokasi hantaran** sebelum melihat menu.
+- Lokasi dipilih dari senarai (tab `Senarai_Lokasi`), atau **Lain-lain** untuk taip sendiri (cth. "Wad 12 katil 4"). 5 lokasi terakhir dipaparkan di atas sebagai **Terkini**.
+- Boleh ditukar bila-bila masa melalui butang **Tukar** di atas menu.
+- Pesanan menyimpan `Tarikh_Hidangan` (tarikh makanan diperlukan) berasingan daripada `Tarikh_Masa` (masa tempahan dibuat). Pesanan masuk, label dan laporan ikut `Tarikh_Hidangan`.
+- Pentadbir urus senarai lokasi di tab **Lokasi** (tambah, nyahaktif). Senarai contoh dari `setup()` perlu diganti dengan wad/unit sebenar.
+- `HARI_TEMPAH_AWAL = 7` dalam `Code.gs` — tukar ikut polisi. Pegawai Dietetik perlu sediakan **Menu harian** dan **catuan** untuk tarikh hadapan supaya boleh ditempah awal.
+
 ## Cetakan
 
 **Label bekas makanan (Pengusaha → tab Pesanan masuk)**
@@ -97,6 +113,10 @@ Had kuasa: DIETETIK hanya boleh urus akaun `STAF`. Hanya ADMIN boleh urus akaun 
 - Menu hanya muncul kepada staf jika **Disahkan** DAN dimasukkan ke `Menu_Harian` untuk tarikh + sesi tersebut.
 - Pengusaha ubah menu yang sudah disahkan → status kembali **Draf** (perlu disahkan semula).
 - `CATUAN_MAX_HIDANGAN = 1` — satu catuan tanggung 1 hidangan. Catuan ditanda `Dituntut` sebaik pesanan dihantar.
+- **Menu catuan**: Pegawai Dietetik tambah di tab **Catuan** (terus aktif, tiada harga), kemudian masukkan ke **Menu harian** ikut tarikh & sesi. `Daftar_Menu.Jenis_Menu` = `Catuan` atau `Jualan`.
+  - Menu catuan hanya dipaparkan kepada kakitangan yang layak catuan bagi sesi itu.
+  - Jika sesi ada menu catuan, catuan hanya boleh digunakan untuk menu catuan. Jika tiada, catuan boleh digunakan untuk 1 hidangan jualan (seperti sebelum ini).
+  - Menu catuan dan jualan dipesan secara berasingan. Kafeteria nampak menu catuan (baca sahaja) di tab Menu saya.
 - Harga dikira di pelayan (harga dari frontend diabaikan).
 - Semua tulisan guna `LockService` — selamat untuk pesanan serentak.
 - Tarikh ikut zon `Asia/Kuala_Lumpur` (elak pepijat `toISOString()` yang guna UTC, ada dalam draf asal — pesanan antara 12:00 malam–8:00 pagi akan tersalah hari).

@@ -88,6 +88,8 @@ h2.bahagian{ font-size:1.05rem; font-weight:700; margin:28px 0 10px; }
 .stepper{ display:inline-flex; align-items:center; border:1.5px solid var(--hijau); border-radius:999px; overflow:hidden; }
 .stepper button{ width:34px; height:32px; border:0; background:transparent; color:var(--hijau); font-size:1.15rem; font-weight:700; line-height:1; }
 .stepper span{ min-width:22px; text-align:center; font-weight:700; }
+.btn-tambah.dipilih{ background:var(--hijau); color:var(--on-hijau); }
+.senarai-catuan{ border-color:var(--kupon); }
 .btn-tambah{ border:1.5px solid var(--hijau); color:var(--hijau); background:transparent; border-radius:999px; padding:5px 14px; font-weight:700; font-size:.88rem; }
 
 /* Butang */
@@ -236,6 +238,20 @@ label.medan{ display:grid; gap:4px; font-size:.86rem; font-weight:600; }
   .cetak-laporan .lap-bhg5{ page:landskap; break-before:page; }
 }
 
+.tetapan-bar{ display:flex; align-items:center; gap:14px; background:var(--kad); border:1.5px solid var(--hijau); border-radius:14px; padding:10px 12px 10px 16px; margin-bottom:14px; }
+.tetapan-bar div{ min-width:0; flex:1; } .tetapan-bar span{ display:block; font-size:.76rem; color:var(--kelabu); }
+.tetapan-bar b{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:.92rem; line-height:1.25; overflow:hidden; }
+.tetapan-bar .btn{ flex:none; }
+.pilih-hari{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+.pilih-hari label{ position:relative; }
+.pilih-hari input{ position:absolute; opacity:0; inset:0; }
+.pilih-hari span{ display:block; text-align:center; border:1.5px solid var(--garis); border-radius:12px; padding:8px 4px; background:var(--kertas); cursor:pointer; }
+.pilih-hari small{ display:block; font-size:.74rem; color:var(--kelabu); }
+.pilih-hari b{ font-size:.95rem; }
+.pilih-hari input:checked + span{ background:var(--hijau); border-color:var(--hijau); color:var(--on-hijau); }
+.pilih-hari input:checked + span small{ color:var(--on-hijau); opacity:.85; }
+.pilih-hari input:focus-visible + span{ outline:3px solid var(--kupon); outline-offset:2px; }
+
 /* Dialog */
 dialog{ border:0; padding:0; width:min(560px, 100%); max-height:92vh; border-radius:20px 20px 0 0; margin:auto auto 0; background:var(--kertas); color:var(--dakwat); }
 @media (min-width:600px){ dialog{ border-radius:20px; margin:auto; } }
@@ -289,7 +305,7 @@ dialog::backdrop{ background:rgba(8,20,17,.55); }
 <script>
 /* ================= KONFIGURASI ================= */
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbylB4HlsI3jbDm_AwAM1efsp0Py5Bf2Bi8bnqYjT4Ispu5UNqBpnUJ98FAaKsTmAOyN/exec' // Pilihan B (GitHub Pages): tampal URL Web App (…/exec). Pilihan A (dalam Apps Script): biarkan kosong.
+  API_URL: '' // Pilihan B (GitHub Pages): tampal URL Web App (…/exec). Pilihan A (dalam Apps Script): biarkan kosong.
 };
 
 const SESI = ['Sarapan', 'Makan Tengah Hari', 'Minum Petang', 'Makan Malam'];
@@ -314,6 +330,10 @@ const $ = s => document.querySelector(s);
 const hariIni = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date()); // YYYY-MM-DD waktu Malaysia
 const jam = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false }).format(new Date()));
 const sesiSemasa = () => { const h = jam(); return h < 10 ? SESI[0] : h < 15 ? SESI[1] : h < 18 ? SESI[2] : SESI[3]; };
+const tambahHari = (t, n) => { const x = new Date(t + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const tarikhObj = t => { const [y, m, d] = t.split('-').map(Number); return new Date(y, m - 1, d); };
+const tarikhPendek = t => tarikhObj(t).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' });
+const hariPendek = t => tarikhObj(t).toLocaleDateString('ms-MY', { weekday: 'short' });
 const rm = n => 'RM ' + Number(n || 0).toFixed(2);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function tarikhPanjang(t) {
@@ -387,7 +407,7 @@ function paparLogin(idIsi = '') {
   skrin(`
       <img class="logo-utama" src="${LOGO_IKON}" alt="Logo Jabatan Dietetik & Sajian">
       <p class="kecil" style="margin:0 0 4px;font-weight:600">Jabatan Dietetik & Sajian, Hospital Kuala Lumpur</p>
-      <h1>Pilihan Diet On-Call</h1>
+      <h1>Tempahan makanan kakitangan</h1>
       <p>Log masuk dengan ID staf dan kata laluan anda.</p>
       <form class="borang" id="fLogin">
         <label class="medan">ID staf<input name="id" autocomplete="username" autocapitalize="characters" required value="${esc(idIsi)}"></label>
@@ -582,6 +602,7 @@ function bukaAkaun() {
 function logout() {
   tutupDialog();
   document.querySelectorAll('.toast').forEach(t => t.remove());
+  Tempahan.tarikh = Tempahan.lokasi = null; Troli.sesi = null; S.data = {};
   S.token = null; S.user = null; simpan.del('hkl_sesi'); Troli.kosong(); clearInterval(S.timer);
   paparLogin();
 }
@@ -591,7 +612,7 @@ const NAV = {
   STAF:      [['menu', 'Menu', 'dulang'], ['pesanan', 'Pesanan saya', 'resit']],
   PENGUSAHA: [['dapur', 'Pesanan masuk', 'loceng'], ['menuSaya', 'Menu saya', 'senarai']],
   DIETETIK:  [['semakan', 'Semakan', 'semak'], ['harian', 'Menu', 'kalendar'], ['catuan', 'Catuan', 'kupon'], ['laporan', 'Laporan', 'resit']],
-  ADMIN:     [['pengguna', 'Pengguna', 'orang'], ['laporan', 'Laporan', 'resit']]
+  ADMIN:     [['pengguna', 'Pengguna', 'orang'], ['lokasi', 'Lokasi', 'peta'], ['laporan', 'Laporan', 'resit']]
 };
 const navSaya = () => NAV[S.user.Peranan].concat(S.user.Pelulus && S.user.Peranan !== 'ADMIN' ? [['pengguna', 'Pengguna', 'orang']] : []);
 function mulaApp() {
@@ -619,39 +640,105 @@ async function tukarView(v) {
 const Troli = {
   sesi: null, items: {},
   kosong() { this.items = {}; },
+  adaCatuan() { return Object.keys(this.items).some(id => S.data.peta?.[id]?.Jenis_Menu === 'Catuan'); },
   bil() { return Object.values(this.items).reduce((a, b) => a + b, 0); },
   jumlah() { return Object.entries(this.items).reduce((a, [id, q]) => a + (S.data.peta?.[id]?.Harga_RM || 0) * q, 0); }
 };
 
+// Tarikh & lokasi ditetapkan setiap kali app dibuka (tidak disimpan), lokasi terkini diingati untuk pilihan pantas
+const Tempahan = { tarikh: null, lokasi: null };
 async function vMenu() {
-  const d = await api('menuHariIni');
-  S.data.menu = d;
-  S.data.peta = {};
-  d.menu.forEach(m => { if (m.Sesi_Makan === (Troli.sesi || sesiSemasa())) S.data.peta[m.ID_Menu] = m; });
-  if (!Troli.sesi) Troli.sesi = sesiSemasa();
+  if (!Tempahan.tarikh || !Tempahan.lokasi) return paparTetapanTempahan();
+  const d = await api('menuHariIni', { tarikh: Tempahan.tarikh });
+  S.data.menu = d; S.data.hariAwal = d.hariTempahAwal;
+  if (!Troli.sesi) Troli.sesi = Tempahan.tarikh === hariIni() ? sesiSemasa() : SESI[0];
   lukisMenu();
+}
+async function paparTetapanTempahan() {
+  $('#troli').classList.add('tersembunyi');
+  if (!S.data.lokasi) S.data.lokasi = await api('senaraiLokasi');
+  const kini = hariIni(), N = S.data.hariAwal ?? 7;
+  const hari = Array.from({ length: N + 1 }, (_, i) => tambahHari(kini, i));
+  const terkini = simpan.get('hkl_lokasi_terkini') || [];
+  const aktif = S.data.lokasi.filter(l => l.Aktif);
+  const pilihT = Tempahan.tarikh || kini;
+  const pilihL = Tempahan.lokasi || terkini[0] || S.user.Lokasi_Wad || '';
+  const dalamSenarai = terkini.includes(pilihL) || aktif.some(l => l.Lokasi === pilihL);
+  const kategori = [...new Set(aktif.map(l => l.Kategori))];
+  const opt = v => `<option value="${esc(v)}" ${v === pilihL ? 'selected' : ''}>${esc(v)}</option>`;
+  $('#main').innerHTML = `
+    <section class="kepala"><p>Sebelum memilih menu</p><h1>Tempah untuk bila, hantar ke mana?</h1></section>
+    <form class="borang" id="fTetapan">
+      <b>Tarikh hidangan</b>
+      <div class="pilih-hari" role="radiogroup" aria-label="Tarikh hidangan">${hari.map((t, i) => `<label>
+        <input type="radio" name="tarikh" value="${t}" ${t === pilihT ? 'checked' : ''}>
+        <span><small>${i === 0 ? 'Hari ini' : i === 1 ? 'Esok' : esc(hariPendek(t))}</small><b>${esc(tarikhPendek(t))}</b></span></label>`).join('')}</div>
+      <label class="medan">Hantar ke (wad / lokasi bertugas)
+        <select name="lokasi" id="selLokasi" required>
+          <option value="">Pilih lokasi</option>
+          ${terkini.length ? `<optgroup label="Terkini">${terkini.map(opt).join('')}</optgroup>` : ''}
+          ${kategori.map(k => `<optgroup label="${esc(k)}">${aktif.filter(l => l.Kategori === k && !terkini.includes(l.Lokasi)).map(l => opt(l.Lokasi)).join('')}</optgroup>`).join('')}
+          <option value="__lain" ${pilihL && !dalamSenarai ? 'selected' : ''}>Lain-lain (taip sendiri)</option>
+        </select></label>
+      <label class="medan ${pilihL && !dalamSenarai ? '' : 'tersembunyi'}" id="medanLain">Nyatakan lokasi
+        <input name="lokasiLain" maxlength="80" value="${pilihL && !dalamSenarai ? esc(pilihL) : ''}" placeholder="cth. Wad 12 katil 4, bilik oncall aras 3">
+        <span class="bantuan">Beri butiran supaya penghantar mudah mencari anda.</span></label>
+      <button class="btn btn-penuh" type="submit">Lihat menu</button>
+    </form>`;
+  $('#selLokasi').onchange = e => { const lain = e.target.value === '__lain'; $('#medanLain').classList.toggle('tersembunyi', !lain); if (lain) $('#medanLain input').focus(); };
+  $('#fTetapan').onsubmit = e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target));
+    const lokasi = (d.lokasi === '__lain' ? d.lokasiLain : d.lokasi || '').trim();
+    if (!lokasi) return toast('Pilih atau taip lokasi hantaran.', true);
+    if (Tempahan.tarikh && d.tarikh !== Tempahan.tarikh && Troli.bil()) { Troli.kosong(); toast('Troli dikosongkan kerana tarikh ditukar.'); }
+    if (d.tarikh !== Tempahan.tarikh) Troli.sesi = null;
+    Tempahan.tarikh = d.tarikh; Tempahan.lokasi = lokasi;
+    simpan.set('hkl_lokasi_terkini', [lokasi].concat(terkini.filter(x => x !== lokasi)).slice(0, 5));
+    tukarView('menu');
+  };
 }
 function lukisMenu() {
   const d = S.data.menu, sesi = Troli.sesi;
   S.data.peta = {};
   const items = d.menu.filter(m => m.Sesi_Makan === sesi);
   items.forEach(m => S.data.peta[m.ID_Menu] = m);
-  const c = d.catuan.find(x => x.Sesi_Catuan === sesi);
+  const jualan = items.filter(m => m.Jenis_Menu !== 'Catuan'), mCatuan = items.filter(m => m.Jenis_Menu === 'Catuan');
+  const c = d.catuan.find(x => x.Sesi_Catuan === sesi), dituntut = c && c.Status_Tuntut === 'Dituntut';
+  const adaMenuCatuan = (d.sesiAdaMenuCatuan || []).includes(sesi);
   $('#main').innerHTML = `
-    <section class="kepala"><p>${tarikhPanjang(d.tarikh)}</p><h1>Menu hari ini</h1></section>
+    <section class="kepala"><h1>${d.tarikh === hariIni() ? 'Menu hari ini' : 'Menu ' + esc(tarikhPendek(d.tarikh))}</h1></section>
+    <div class="tetapan-bar">
+      <div><span>Untuk</span><b>${esc(tarikhObj(d.tarikh).toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'short' }))}</b></div>
+      <div><span>Hantar ke</span><b>${esc(Tempahan.lokasi)}</b></div>
+      <button class="btn btn-garis btn-kecil" data-act="tukarTetapan">Tukar</button>
+    </div>
     <div class="segmen" role="tablist" aria-label="Sesi makan">
       ${SESI.map(s => `<button role="tab" aria-selected="${s === sesi}" data-act="pilihSesi" data-v="${esc(s)}">${esc(s)}<span class="bil">${d.menu.filter(m => m.Sesi_Makan === s).length}</span></button>`).join('')}
     </div>
-    ${c ? `<div class="kupon ${c.Status_Tuntut === 'Dituntut' ? 'guna' : ''}">
+    ${c ? `<div class="kupon ${dituntut ? 'guna' : ''}">
         <div class="cop">Catuan<br>percuma</div>
-        <div>${c.Status_Tuntut === 'Dituntut'
+        <div>${dituntut
           ? `<b>Catuan ${esc(sesi.toLowerCase())} sudah digunakan</b><span class="kecil">Pesanan tambahan adalah berbayar.</span>`
+          : adaMenuCatuan ? `<b>Anda layak catuan untuk sesi ini</b>Pilih ${CATUAN_MAX_HIDANGAN} hidangan daripada menu catuan di bawah.`
           : `<b>Anda layak catuan untuk sesi ini</b>Pilih ${CATUAN_MAX_HIDANGAN} hidangan, kemudian pilih "Catuan percuma" semasa bayaran.`}</div>
       </div>` : ''}
-    ${items.length ? `<ul class="senarai">${items.map(barisItem).join('')}</ul>`
-      : `<div class="kosong">Belum ada menu disahkan untuk ${esc(sesi.toLowerCase())}. Pilih sesi lain atau semak semula nanti.</div>`}
+    ${mCatuan.length ? `<h2 class="bahagian" style="margin-top:0">Menu catuan <span class="kecil">(ditetapkan Jabatan Dietetik & Sajian)</span></h2>
+      <ul class="senarai senarai-catuan">${mCatuan.map(m => barisCatuan(m, dituntut)).join('')}</ul>
+      <h2 class="bahagian">Menu jualan</h2>` : ''}
+    ${jualan.length ? `<ul class="senarai">${jualan.map(barisItem).join('')}</ul>`
+      : `<div class="kosong">Belum ada menu ${mCatuan.length ? 'jualan' : 'disahkan'} untuk ${esc(sesi.toLowerCase())}. Pilih sesi lain atau semak semula nanti.</div>`}
   `;
   lukisTroli();
+}
+function barisCatuan(m, dituntut) {
+  const dipilih = !!Troli.items[m.ID_Menu];
+  return `<li class="item">
+    <div><p class="nama">${esc(m.Nama_Sajian)}</p><p class="meta"><span>${esc(m.Kategori)}</span><span>${m.Anggaran_Kalori} kkal</span></p>
+      ${m.Keterangan ? `<p class="kecil">${esc(m.Keterangan)}</p>` : ''}</div>
+    <div class="kanan"><span class="harga">Percuma</span>
+      ${dituntut ? '' : `<button class="btn-tambah ${dipilih ? 'dipilih' : ''}" data-act="pilihCatuan" data-v="${m.ID_Menu}" aria-pressed="${dipilih}">${dipilih ? 'Dipilih' : 'Pilih'}</button>`}
+    </div></li>`;
 }
 function barisItem(m) {
   const q = Troli.items[m.ID_Menu] || 0;
@@ -666,27 +753,29 @@ function lukisTroli() {
   const el = $('#troli'), n = Troli.bil();
   if (!n || S.view !== 'menu') { el.classList.add('tersembunyi'); return; }
   el.classList.remove('tersembunyi');
-  el.innerHTML = `<div class="troli-dalam"><div class="jum">${rm(Troli.jumlah())}<small>${n} hidangan, ${esc(Troli.sesi.toLowerCase())}</small></div>
+  el.innerHTML = `<div class="troli-dalam"><div class="jum">${Troli.adaCatuan() ? 'Catuan percuma' : rm(Troli.jumlah())}<small>${n} hidangan, ${esc(Troli.sesi.toLowerCase())}</small></div>
     <button class="btn" data-act="semakTroli">Semak pesanan</button></div>`;
 }
 function bukaSemakan() {
   const c = S.data.menu.catuan.find(x => x.Sesi_Catuan === Troli.sesi && x.Status_Tuntut !== 'Dituntut');
-  const bolehCatuan = c && Troli.bil() <= CATUAN_MAX_HIDANGAN;
+  const trCatuan = Troli.adaCatuan();
+  const hadMenuCatuan = !trCatuan && (S.data.menu.sesiAdaMenuCatuan || []).includes(Troli.sesi);
+  const bolehCatuan = c && Troli.bil() <= CATUAN_MAX_HIDANGAN && !hadMenuCatuan;
   const barisan = Object.entries(Troli.items).map(([id, q]) => {
     const m = S.data.peta[id]; return `<li><span>${esc(m.Nama_Sajian)} ×${q}</span><span>${rm(m.Harga_RM * q)}</span></li>`;
   }).join('');
   bukaDialog('Semak pesanan', `
-    <div class="slip" style="margin-bottom:18px"><div class="no"><b>${esc(Troli.sesi)}</b><span class="kecil">${new Date().toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' })}</span></div>
+    <div class="slip" style="margin-bottom:18px"><div class="no"><b>${esc(Troli.sesi)}</b><span class="kecil">${esc(tarikhPendek(Tempahan.tarikh))}</span></div>
+      <p class="kecil" style="margin-bottom:8px">Hantar ke <b>${esc(Tempahan.lokasi)}</b></p>
       <ul>${barisan}</ul><div class="jumlah"><span>Jumlah</span><span id="jumSemak">${rm(bolehCatuan ? 0 : Troli.jumlah())}</span></div></div>
     <form id="fPesan" class="borang">
-      <label class="medan">Hantar ke (lokasi / wad)<input name="Lokasi_Wad" value="${esc(S.user.Lokasi_Wad || '')}" required></label>
       <div class="pilihan" role="radiogroup" aria-label="Cara bayaran">
         <label><input type="radio" name="Jenis_Bayaran" value="Catuan" ${bolehCatuan ? 'checked' : 'disabled'}>
-          <span><b>Catuan percuma</b><small>${!c ? 'Tiada catuan untuk sesi ini.' : Troli.bil() > CATUAN_MAX_HIDANGAN ? `Catuan meliputi ${CATUAN_MAX_HIDANGAN} hidangan sahaja. Kurangkan troli untuk guna catuan.` : 'Ditanggung oleh hospital.'}</small></span></label>
-        <label><input type="radio" name="Jenis_Bayaran" value="Berbayar" ${bolehCatuan ? '' : 'checked'}>
-          <span><b>Berbayar</b><small>Bayar ${rm(Troli.jumlah())} semasa ambil atau terima makanan.</small></span></label>
+          <span><b>Catuan percuma</b><small>${!c ? 'Tiada catuan untuk sesi ini.' : hadMenuCatuan ? 'Catuan sesi ini hanya untuk menu catuan. Pilih daripada menu catuan.' : Troli.bil() > CATUAN_MAX_HIDANGAN ? `Catuan meliputi ${CATUAN_MAX_HIDANGAN} hidangan sahaja. Kurangkan troli untuk guna catuan.` : 'Ditanggung oleh hospital.'}</small></span></label>
+        <label><input type="radio" name="Jenis_Bayaran" value="Berbayar" ${trCatuan ? 'disabled' : bolehCatuan ? '' : 'checked'}>
+          <span><b>Berbayar</b><small>${trCatuan ? 'Menu catuan tidak dijual.' : `Bayar ${rm(Troli.jumlah())} semasa ambil atau terima makanan.`}</small></span></label>
       </div>
-      <button class="btn btn-penuh" type="submit">Hantar pesanan</button>
+      <button class="btn btn-penuh" type="submit" ${trCatuan && !bolehCatuan ? 'disabled' : ''}>Hantar pesanan</button>
     </form>`);
   $('#fPesan').onchange = e => { if (e.target.name === 'Jenis_Bayaran') $('#jumSemak').textContent = rm(e.target.value === 'Catuan' ? 0 : Troli.jumlah()); };
   $('#fPesan').onsubmit = async e => {
@@ -694,12 +783,12 @@ function bukaSemakan() {
     const f = new FormData(e.target), btn = e.submitter; btn.disabled = true;
     try {
       const p = await api('buatPesanan', {
-        sesi: Troli.sesi, Lokasi_Wad: f.get('Lokasi_Wad'), Jenis_Bayaran: f.get('Jenis_Bayaran'),
+        sesi: Troli.sesi, tarikh: Tempahan.tarikh, Lokasi_Wad: Tempahan.lokasi, Jenis_Bayaran: f.get('Jenis_Bayaran'),
         items: Object.entries(Troli.items).map(([ID_Menu, qty]) => ({ ID_Menu, qty }))
       });
       Troli.kosong();
       bukaDialog('Pesanan dihantar', slip(p, true) + `<button class="btn btn-penuh" data-act="nav" data-v="pesanan">Lihat pesanan saya</button>`);
-      S.data.menu = await api('menuHariIni'); lukisMenu();
+      S.data.menu = await api('menuHariIni', { tarikh: Tempahan.tarikh }); lukisMenu();
     } catch (err) { toast(err.message, true); btn.disabled = false; }
   };
 }
@@ -709,7 +798,8 @@ function slip(p, baru) {
   const idx = ALIRAN.indexOf(p.Status_Siap);
   return `<article class="slip ${baru ? 'baru' : ''}">
     <div class="no"><strong>${esc(p.ID_Pesanan)}</strong>${chip(p.Status_Siap)}</div>
-    <p class="kecil">${esc(p.Tarikh_Masa)}, ${esc(p.Sesi_Makan || '')}</p>
+    <p class="kecil"><b>Untuk ${esc(fmtMasa(p.Tarikh_Hidangan || String(p.Tarikh_Masa).slice(0, 10)))}, ${esc(p.Sesi_Makan || '')}</b></p>
+    <p class="kecil">Ditempah ${esc(fmtMasa(p.Tarikh_Masa))}</p>
     <p class="kecil" style="margin-bottom:10px">Hantar ke ${esc(p.Lokasi_Wad)}</p>
     ${p.Jenis_Bayaran === 'Catuan' ? '<span class="cop-catuan">Catuan</span>' : ''}
     <ul>${lines}</ul>
@@ -760,7 +850,7 @@ function lukisDapur(tarikh) {
       const i = ALIRAN.indexOf(p.Status_Siap), seterus = i >= 0 && i < ALIRAN.length - 1 ? ALIRAN[i + 1] : null;
       return `<li>
         <div><p class="nama">${esc(p.ID_Pesanan)} ${chip(p.Status_Siap)} ${p.Jenis_Bayaran === 'Catuan' ? chip('Catuan') : ''}</p>
-          <p class="meta"><span>${esc(String(p.Tarikh_Masa).slice(11))}</span><span>${esc(p.Nama_Staf || p.ID_Staf)}</span><span>${esc(p.Lokasi_Wad)}</span><span>${esc(p.Sesi_Makan || '')}</span></p>
+          <p class="meta"><span>Tempah ${String(p.Tarikh_Masa).slice(0, 10) === tarikh ? esc(String(p.Tarikh_Masa).slice(11)) : esc(fmtMasa(p.Tarikh_Masa).slice(0, 5) + String(p.Tarikh_Masa).slice(10))}</span><span>${esc(p.Nama_Staf || p.ID_Staf)}</span><span>${esc(p.Lokasi_Wad)}</span><span>${esc(p.Sesi_Makan || '')}</span></p>
           <p style="margin-top:4px">${esc(String(p.Item_Dipesan).replace(/; /g, ', ').replace(/ x(\d+)/g, ' ×$1'))}</p></div>
         <div class="harga">${rm(p.Jumlah_RM)}</div>
         <div class="tindakan">
@@ -774,7 +864,9 @@ function lukisDapur(tarikh) {
 }
 
 async function vMenuSaya() {
-  const senarai = await api('daftarMenu');
+  const semuaMenu = await api('daftarMenu');
+  const senarai = semuaMenu.filter(m => m.Jenis_Menu !== 'Catuan');
+  const mCatuan = semuaMenu.filter(m => m.Jenis_Menu === 'Catuan' && m.Status_Pengesahan === 'Disahkan');
   S.data.daftar = senarai;
   const edit = S.data.editMenu ? senarai.find(m => m.ID_Menu === S.data.editMenu) : null;
   $('#main').innerHTML = `
@@ -796,7 +888,10 @@ async function vMenuSaya() {
       <div><p class="nama">${esc(m.Nama_Sajian)}</p><p class="meta"><span>${esc(m.Kategori)}</span>${chip(m.Status_Pengesahan)}</p></div>
       <div class="kanan" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="harga">${rm(m.Harga_RM)}</span>
       <button class="btn btn-garis btn-kecil" data-act="editMenu" data-v="${m.ID_Menu}">Ubah</button></div></li>`).join('')}</ul>`
-      : '<div class="kosong">Belum ada menu. Tambah menu pertama anda di atas.</div>'}`;
+      : '<div class="kosong">Belum ada menu. Tambah menu pertama anda di atas.</div>'}
+    ${mCatuan.length ? `<h2 class="bahagian">Menu catuan (${mCatuan.length})</h2>
+      <p class="kecil" style="margin-bottom:10px">Ditetapkan oleh Jabatan Dietetik & Sajian. Untuk rujukan penyediaan; tidak boleh diubah oleh kafeteria.</p>
+      <ul class="senarai senarai-catuan">${mCatuan.map(m => `<li><div><p class="nama">${esc(m.Nama_Sajian)}</p><p class="meta"><span>${esc(m.Kategori)}</span></p>${m.Keterangan ? `<p class="kecil">${esc(m.Keterangan)}</p>` : ''}</div>${chip('Catuan')}</li>`).join('')}</ul>` : ''}`;
   $('#fMenu').onsubmit = async e => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)); if (edit) f.ID_Menu = edit.ID_Menu;
@@ -808,7 +903,7 @@ async function vMenuSaya() {
 
 /* ================= DIETETIK ================= */
 async function vSemakan() {
-  const senarai = await api('daftarMenu');
+  const senarai = (await api('daftarMenu')).filter(m => m.Jenis_Menu !== 'Catuan');
   const draf = senarai.filter(m => m.Status_Pengesahan === 'Draf' || !m.Status_Pengesahan);
   const lain = senarai.filter(m => !draf.includes(m));
   const baris = (m, pending) => `<li>
@@ -836,7 +931,7 @@ async function vHarian() {
     <form class="borang" id="fHarian">
       <b>Masukkan menu ke sesi</b>
       ${sah.length ? `
-      <label class="medan">Menu disahkan<select name="ID_Menu" required>${sah.map(m => `<option value="${m.ID_Menu}">${esc(m.Nama_Sajian)} (${rm(m.Harga_RM)})</option>`).join('')}</select></label>
+      <label class="medan">Menu disahkan<select name="ID_Menu" required>${['Catuan', 'Jualan'].map(j => { const k = sah.filter(m => (m.Jenis_Menu === 'Catuan' ? 'Catuan' : 'Jualan') === j); return k.length ? `<optgroup label="Menu ${j.toLowerCase()}">${k.map(m => `<option value="${m.ID_Menu}">${esc(m.Nama_Sajian)}${j === 'Jualan' ? ` (${rm(m.Harga_RM)})` : ''}</option>`).join('')}</optgroup>` : ''; }).join('')}</select></label>
       <div class="baris2">
         <label class="medan">Sesi<select name="Sesi_Makan">${opsyen(SESI, S.data.sesiHarian || sesiSemasa())}</select></label>
         <label class="medan">Anggaran kalori (kkal)<input name="Anggaran_Kalori" type="number" min="0" step="1" inputmode="numeric" required></label>
@@ -848,7 +943,7 @@ async function vHarian() {
       const kal = r.length ? Math.round(r.reduce((a, h) => a + h.Anggaran_Kalori, 0) / r.length) : 0;
       return `<h2 class="bahagian">${esc(s)} <span class="kecil">(${r.length} sajian${r.length ? `, purata ${kal} kkal` : ''})</span></h2>
         ${r.length ? `<ul class="senarai">${r.map(h => `<li>
-          <div><p class="nama">${esc(h.Nama_Sajian)}</p><p class="meta"><span>${h.Anggaran_Kalori} kkal</span><span>${rm(h.Harga_RM)}</span>${h.Status_Pengesahan !== 'Disahkan' ? chip('Tidak dipapar: ' + (h.Status_Pengesahan || 'tiada')) : ''}</p></div>
+          <div><p class="nama">${esc(h.Nama_Sajian)}</p><p class="meta"><span>${h.Anggaran_Kalori} kkal</span>${h.Jenis_Menu === 'Catuan' ? chip('Catuan') : `<span>${rm(h.Harga_RM)}</span>`}${h.Status_Pengesahan !== 'Disahkan' ? chip('Tidak dipapar: ' + (h.Status_Pengesahan || 'tiada')) : ''}</p></div>
           <button class="btn btn-kecil btn-bahaya" data-act="buangHarian" data-id="${h.ID_Menu}" data-v="${esc(h.Sesi_Makan)}">Buang</button></li>`).join('')}</ul>`
         : '<div class="kosong">Tiada sajian.</div>'}`;
     }).join('')}`;
@@ -865,9 +960,31 @@ async function vHarian() {
 
 async function vCatuan() {
   const tarikh = S.data.tarikhCatuan || hariIni();
-  const [senarai, staf] = await Promise.all([api('catuan', { tarikh }), api('senaraiStaf')]);
+  const [senarai, staf, daftar] = await Promise.all([api('catuan', { tarikh }), api('senaraiStaf'), api('daftarMenu')]);
+  const mCatuan = daftar.filter(m => m.Jenis_Menu === 'Catuan');
+  const edit = S.data.editCatuan ? mCatuan.find(m => m.ID_Menu === S.data.editCatuan) : null;
   $('#main').innerHTML = `
-    <section class="kepala"><p>${tarikhPanjang(tarikh)}</p><h1>Senarai catuan</h1></section>
+    <section class="kepala"><p>Menu dan kelayakan catuan</p><h1>Catuan</h1></section>
+    <h2 class="bahagian" style="margin-top:0">Menu catuan (${mCatuan.filter(m => m.Status_Pengesahan === 'Disahkan').length} aktif)</h2>
+    <form class="borang" id="fMenuCatuan">
+      <b>${edit ? 'Ubah menu catuan' : 'Tambah menu catuan'}</b>
+      <label class="medan">Nama hidangan / set<input name="Nama_Sajian" value="${esc(edit?.Nama_Sajian || '')}" required placeholder="cth. Set nasi ayam masak merah"></label>
+      <label class="medan">Kategori<select name="Kategori">${opsyen(KATEGORI, edit?.Kategori || 'Set')}</select></label>
+      <label class="medan">Kandungan (pilihan)<input name="Keterangan" maxlength="200" value="${esc(edit?.Keterangan || '')}" placeholder="cth. Nasi putih, ayam masak merah, sayur campur, buah">
+        <span class="bantuan">Dipaparkan kepada kakitangan dan kafeteria.</span></label>
+      <div style="display:flex;gap:8px"><button class="btn" type="submit" style="flex:1">${edit ? 'Simpan perubahan' : 'Tambah menu catuan'}</button>
+        ${edit ? '<button class="btn btn-garis" type="button" data-act="batalEditCatuan">Batal</button>' : ''}</div>
+      <p class="bantuan">Selepas ditambah, masukkan ke tab Menu (menu harian) mengikut tarikh dan sesi berserta kalori. Menu catuan hanya dipaparkan kepada kakitangan yang layak catuan bagi sesi itu.</p>
+    </form>
+    ${mCatuan.length ? `<ul class="senarai senarai-catuan" style="margin-top:12px">${mCatuan.map(m => `<li>
+      <div><p class="nama">${esc(m.Nama_Sajian)}</p><p class="meta"><span>${esc(m.Kategori)}</span>${m.Status_Pengesahan === 'Disahkan' ? chip('Aktif') : '<span class="chip Ditolak">Tidak aktif</span>'}</p>
+        ${m.Keterangan ? `<p class="kecil">${esc(m.Keterangan)}</p>` : ''}</div><span></span>
+      <div class="tindakan"><button class="btn btn-kecil btn-garis" data-act="editCatuanMenu" data-v="${m.ID_Menu}">Ubah</button>
+        ${m.Status_Pengesahan === 'Disahkan' ? `<button class="btn btn-kecil btn-bahaya" data-act="togolCatuanMenu" data-id="${m.ID_Menu}" data-v="Ditolak">Nyahaktif</button>`
+          : `<button class="btn btn-kecil" data-act="togolCatuanMenu" data-id="${m.ID_Menu}" data-v="Disahkan">Aktifkan</button>`}</div>
+    </li>`).join('')}</ul>` : ''}
+    <h2 class="bahagian">Kelayakan catuan</h2>
+    <p class="kecil" style="margin:-4px 0 10px">${tarikhPanjang(tarikh)}</p>
     <div class="baris-alat"><label class="medan">Tarikh<input type="date" id="tCatuan" value="${tarikh}"></label></div>
     <form class="borang" id="fCatuan">
       <b>Tambah kelayakan catuan</b>
@@ -882,6 +999,13 @@ async function vCatuan() {
       ${c.Status_Tuntut !== 'Dituntut' ? `<button class="btn btn-kecil btn-bahaya" data-act="buangCatuan" data-id="${esc(c.ID_Staf)}" data-v="${esc(c.Sesi_Catuan)}">Buang</button>` : '<span></span>'}
     </li>`).join('')}</ul>` : '<div class="kosong">Tiada catuan untuk tarikh ini.</div>'}`;
   $('#tCatuan').onchange = e => { S.data.tarikhCatuan = e.target.value; tukarView('catuan'); };
+  $('#fMenuCatuan').onsubmit = async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target)); if (edit) d.ID_Menu = edit.ID_Menu;
+    e.submitter.disabled = true;
+    try { await api('simpanMenuCatuan', d); toast(edit ? 'Menu catuan dikemas kini.' : 'Menu catuan ditambah. Masukkan ke menu harian di tab Menu.'); S.data.editCatuan = null; tukarView('catuan'); }
+    catch (err) { toast(err.message, true); e.submitter.disabled = false; }
+  };
   $('#fCatuan').onsubmit = async e => {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.target)); d.Tarikh = tarikh;
@@ -994,7 +1118,7 @@ function senaraiLabel(pesanan, mod) {
 function htmlSatuLabel(l, saiz) {
   const p = l.p;
   return `<div class="lbl lbl-${saiz}">
-    <div class="lbl-atas"><span class="lbl-sesi">${esc(p.Sesi_Makan || '')}</span><span class="lbl-no">${esc(p.ID_Pesanan)}</span></div>
+    <div class="lbl-atas"><span class="lbl-sesi">${esc(p.Sesi_Makan || '')} · ${esc(fmtMasa(p.Tarikh_Hidangan || String(p.Tarikh_Masa).slice(0, 10)).slice(0, 5))}</span><span class="lbl-no">${esc(p.ID_Pesanan)}</span></div>
     <div class="lbl-nama">${esc(p.Nama_Staf || p.ID_Staf)}</div>
     <div class="lbl-info"><span><b>Wad:</b> ${esc(p.Lokasi_Wad)}</span><span><b>Tel:</b> ${esc(fmtTel(p.No_Tel) || '-')}</span></div>
     <div class="lbl-menu">${l.item.map(i => `<span>${esc(i.nama)}${i.q > 1 ? ` <b>×${i.q}</b>` : ''}</span>`).join('')}</div>
@@ -1154,9 +1278,9 @@ function htmlLaporan({ dari, hingga, sesi, senarai }) {
     </tbody></table>
     <section class="lap-bhg5">
     <h3>5. Senarai tempahan</h3>
-    <table class="lap-jadual lap-perinci"><colgroup><col style="width:4%"><col style="width:10%"><col style="width:10%"><col style="width:13%"><col style="width:9%"><col style="width:10%"><col style="width:9%"><col style="width:18%"><col style="width:6%"><col style="width:4%"><col style="width:7%"></colgroup><thead><tr><th>Bil</th><th>No. pesanan</th><th>Tarikh / masa</th><th>Nama</th><th>No. tel</th><th>Wad</th><th>Sesi</th><th>Menu</th><th>Bayaran</th><th class="n">RM</th><th>Status</th></tr></thead><tbody>
-      ${senarai.slice().sort((a, b) => String(a.Tarikh_Masa).localeCompare(String(b.Tarikh_Masa))).map((p, i) => `<tr class="${p.Status_Siap === 'Dibatalkan' ? 'batal' : ''}">
-        <td>${i + 1}</td><td>${esc(p.ID_Pesanan)}</td><td>${esc(fmtMasa(p.Tarikh_Masa))}</td><td>${esc(p.Nama_Staf || p.ID_Staf)}</td><td>${esc(fmtTel(p.No_Tel))}</td>
+    <table class="lap-jadual lap-perinci"><colgroup><col style="width:4%"><col style="width:10%"><col style="width:10%"><col style="width:13%"><col style="width:9%"><col style="width:10%"><col style="width:9%"><col style="width:18%"><col style="width:6%"><col style="width:4%"><col style="width:7%"></colgroup><thead><tr><th>Bil</th><th>No. pesanan</th><th>Tarikh</th><th>Nama</th><th>No. tel</th><th>Wad</th><th>Sesi</th><th>Menu</th><th>Bayaran</th><th class="n">RM</th><th>Status</th></tr></thead><tbody>
+      ${senarai.slice().sort((a, b) => (a.Tarikh_Hidangan + SESI.indexOf(a.Sesi_Makan) + a.Tarikh_Masa).localeCompare(b.Tarikh_Hidangan + SESI.indexOf(b.Sesi_Makan) + b.Tarikh_Masa)).map((p, i) => `<tr class="${p.Status_Siap === 'Dibatalkan' ? 'batal' : ''}">
+        <td>${i + 1}</td><td>${esc(p.ID_Pesanan)}</td><td>${esc(fmtMasa(p.Tarikh_Hidangan))}<br><span style="color:#666">Tempah ${esc(fmtMasa(p.Tarikh_Masa))}</span></td><td>${esc(p.Nama_Staf || p.ID_Staf)}</td><td>${esc(fmtTel(p.No_Tel))}</td>
         <td>${esc(p.Lokasi_Wad)}</td><td>${esc(p.Sesi_Makan || '')}</td><td>${pecahItem(p.Item_Dipesan).map(x => esc(x.nama) + ' ×' + x.q).join('<br>')}</td>
         <td>${p.Jenis_Bayaran === 'Catuan' ? 'Catuan' : 'Berbayar'}</td><td class="n">${Number(p.Jumlah_RM || 0).toFixed(2)}</td><td>${esc(p.Status_Siap)}</td></tr>`).join('')}
     </tbody></table>
@@ -1167,7 +1291,34 @@ function htmlLaporan({ dari, hingga, sesi, senarai }) {
   </div>`;
 }
 
-const VIEWS = { laporan: vLaporan, pengguna: vPengguna, menu: vMenu, pesanan: vPesananSaya, dapur: vDapur, menuSaya: vMenuSaya, semakan: vSemakan, harian: vHarian, catuan: vCatuan };
+async function vLokasi() {
+  const senarai = await api('senaraiLokasi');
+  const kat = ['Wad', 'Unit', 'Jabatan', 'Klinik', 'Lain-lain'];
+  const kumpulan = [...new Set(kat.concat(senarai.map(l => l.Kategori)))].filter(k => senarai.some(l => l.Kategori === k));
+  $('#main').innerHTML = `
+    <section class="kepala"><p>Pilihan lokasi hantaran untuk kakitangan</p><h1>Lokasi / wad</h1></section>
+    <form class="borang" id="fLokasi">
+      <b>Tambah lokasi</b>
+      <div class="baris2">
+        <label class="medan">Nama lokasi<input name="Lokasi" required maxlength="80" placeholder="cth. Wad 12"></label>
+        <label class="medan">Kategori<select name="Kategori">${opsyen(kat, 'Wad')}</select></label>
+      </div>
+      <button class="btn" type="submit">Tambah</button>
+      <p class="bantuan">Lokasi tidak aktif disembunyikan daripada pilihan kakitangan, tetapi pesanan lama kekal.</p>
+    </form>
+    ${kumpulan.map(k => `<h2 class="bahagian">${esc(k)}</h2><ul class="senarai">${senarai.filter(l => l.Kategori === k).map(l => `<li>
+      <div><p class="nama">${esc(l.Lokasi)}</p><p class="meta">${l.Aktif ? chip('Aktif') : '<span class="chip Ditolak">Tidak aktif</span>'}</p></div>
+      <button class="btn btn-kecil ${l.Aktif ? 'btn-bahaya' : ''}" data-act="togolLokasi" data-id="${esc(l.Lokasi)}" data-v="${l.Aktif ? '0' : '1'}">${l.Aktif ? 'Nyahaktif' : 'Aktifkan'}</button>
+    </li>`).join('')}</ul>`).join('') || '<div class="kosong" style="margin-top:14px">Belum ada lokasi.</div>'}`;
+  $('#fLokasi').onsubmit = async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target)); e.submitter.disabled = true;
+    try { await api('simpanLokasi', d); toast(d.Lokasi + ' ditambah.'); S.data.lokasi = null; vLokasi(); }
+    catch (err) { toast(err.message, true); e.submitter.disabled = false; }
+  };
+}
+
+const VIEWS = { lokasi: vLokasi, laporan: vLaporan, pengguna: vPengguna, menu: vMenu, pesanan: vPesananSaya, dapur: vDapur, menuSaya: vMenuSaya, semakan: vSemakan, harian: vHarian, catuan: vCatuan };
 
 /* ================= DIALOG ================= */
 function bukaDialog(tajuk, html) {
@@ -1225,7 +1376,20 @@ document.addEventListener('click', async e => {
       if (Troli.bil() && !confirm('Troli untuk ' + Troli.sesi.toLowerCase() + ' akan dikosongkan. Teruskan?')) return;
       Troli.kosong(); Troli.sesi = v; lukisMenu();
     },
-    tambah: () => { const q = Troli.items[v] || 0; if (q >= 10) return toast('Maksimum 10 bagi setiap item.'); Troli.items[v] = q + 1; lukisMenu(); },
+    tukarTetapan: () => paparTetapanTempahan(),
+    togolLokasi: async () => {
+      b.disabled = true;
+      try { await api('simpanLokasi', { Lokasi: id, Aktif: v === '1' }); S.data.lokasi = null; vLokasi(); }
+      catch (err) { toast(err.message, true); b.disabled = false; }
+    },
+    pilihCatuan: () => {
+      if (Troli.items[v]) { delete Troli.items[v]; return lukisMenu(); }
+      if (Troli.bil() && !Troli.adaCatuan() && !confirm('Menu catuan dipesan berasingan. Kosongkan troli menu jualan?')) return;
+      Troli.items = { [v]: 1 }; lukisMenu();
+    },
+    tambah: () => {
+      if (Troli.adaCatuan()) { if (!confirm('Menu jualan dipesan berasingan daripada catuan. Buang pilihan catuan?')) return; Troli.kosong(); }
+      const q = Troli.items[v] || 0; if (q >= 10) return toast('Maksimum 10 bagi setiap item.'); Troli.items[v] = q + 1; lukisMenu(); },
     kurang: () => { Troli.items[v] = (Troli.items[v] || 0) - 1; if (Troli.items[v] <= 0) delete Troli.items[v]; lukisMenu(); },
     semakTroli: () => bukaSemakan(),
     tapisDapur: () => { S.data.tapisDapur = v; lukisDapur(S.data.tarikhDapur || hariIni()); },
@@ -1236,6 +1400,13 @@ document.addEventListener('click', async e => {
       catch (err) { toast(err.message, true); b.disabled = false; }
     },
     editMenu: () => { S.data.editMenu = v; vMenuSaya(); window.scrollTo(0, 0); },
+    editCatuanMenu: () => { S.data.editCatuan = v; vCatuan(); window.scrollTo(0, 0); },
+    batalEditCatuan: () => { S.data.editCatuan = null; vCatuan(); },
+    togolCatuanMenu: async () => {
+      b.disabled = true;
+      try { await api('sahkanMenu', { ID_Menu: id, status: v }); toast(v === 'Disahkan' ? 'Menu catuan diaktifkan.' : 'Menu catuan dinyahaktif.'); vCatuan(); }
+      catch (err) { toast(err.message, true); b.disabled = false; }
+    },
     batalEdit: () => { S.data.editMenu = null; vMenuSaya(); },
     sahkan: async () => {
       b.disabled = true;
@@ -1267,6 +1438,7 @@ function ikon(n, c, s) {
     kalendar: '<path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/>',
     emel: '<path d="M4 6h16v12H4zM4 7l8 6 8-6"/>',
     kunci: '<path d="M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2"/>',
+    peta: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
     orang: '<path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM21 19v-1a4 4 0 0 0-3-3.9M15.5 4.1a3 3 0 0 1 0 5.8"/>',
     kupon: '<path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3zM13 4v12" transform="translate(0 2)"/>'
   }[n];
@@ -1275,7 +1447,7 @@ function ikon(n, c, s) {
 
 /* ================= MOCK BACKEND (mod demo) ================= */
 const Mock = (() => {
-  const KUNCI = 'hkl_demo_db_v4';
+  const KUNCI = 'hkl_demo_db_v6';
   const otp = {};
   let db = simpan.get(KUNCI);
   const sesiToken = {};
@@ -1299,17 +1471,34 @@ const Mock = (() => {
         ['M04', 'Nasi putih, ikan bakar & sayur campur', 9.0, 'Set'], ['M05', 'Mi sup ayam', 7.0, 'Mi'], ['M06', 'Nasi ayam hainan', 8.5, 'Nasi'],
         ['M07', 'Kuih seri muka', 1.5, 'Kuih'], ['M08', 'Teh tarik kurang manis', 2.5, 'Minuman'], ['M09', 'Buah tembikai potong', 3.0, 'Buah'],
         ['M10', 'Nasi goreng kampung', 7.0, 'Nasi'], ['M11', 'Karipap pusing', 1.5, 'Kuih']
-      ].map(([ID_Menu, Nama_Sajian, Harga_RM, Kategori], i) => ({ ID_Menu, Nama_Sajian, Harga_RM, Kategori, Status_Pengesahan: i === 10 ? 'Draf' : 'Disahkan' })),
-      Menu_Harian: [], Senarai_Catuan: [], Pesanan_Masuk: [], seedTarikh: null
+      ].map(([ID_Menu, Nama_Sajian, Harga_RM, Kategori], i) => ({ ID_Menu, Nama_Sajian, Harga_RM, Kategori, Status_Pengesahan: i === 10 ? 'Draf' : 'Disahkan', Jenis_Menu: 'Jualan', Keterangan: '' }))
+      .concat([
+        ['C01', 'Set catuan tengah hari A', 'Set', 'Nasi putih, ayam masak merah, sayur campur, buah'],
+        ['C02', 'Set catuan tengah hari B', 'Set', 'Nasi putih, ikan masak kari, kacang panjang goreng, buah'],
+        ['C03', 'Set catuan malam', 'Set', 'Nasi putih, daging masak kicap, sayur bayam, buah']
+      ].map(([ID_Menu, Nama_Sajian, Kategori, Keterangan]) => ({ ID_Menu, Nama_Sajian, Harga_RM: 0, Kategori, Status_Pengesahan: 'Disahkan', Jenis_Menu: 'Catuan', Keterangan }))),
+      Menu_Harian: [], Senarai_Catuan: [], Pesanan_Masuk: [], seedTarikh: null,
+      Senarai_Lokasi: [['Jabatan Kecemasan & Trauma', 'Jabatan'], ['Unit Rawatan Rapi (ICU)', 'Unit'], ['Dewan Bedah', 'Unit'], ['Wad 5A', 'Wad'], ['Wad 5B', 'Wad'],
+        ['Wad 7A', 'Wad'], ['Wad 7B', 'Wad'], ['Wad Bersalin', 'Wad'], ['Klinik Pakar', 'Klinik'], ['Bilik Doktor Oncall', 'Lain-lain']].map(([Lokasi, Kategori]) => ({ Lokasi, Kategori, Aktif: true }))
     };
   }
   function segarHari() {
     const t = hariIni(); if (db.seedTarikh === t) return;
     const plan = [['M02', 'Sarapan', 420], ['M03', 'Sarapan', 350], ['M08', 'Sarapan', 150], ['M04', 'Makan Tengah Hari', 610], ['M06', 'Makan Tengah Hari', 680],
-      ['M01', 'Makan Tengah Hari', 720], ['M09', 'Makan Tengah Hari', 60], ['M07', 'Minum Petang', 210], ['M08', 'Minum Petang', 150], ['M05', 'Makan Malam', 480], ['M10', 'Makan Malam', 650]];
-    plan.forEach(([ID_Menu, Sesi_Makan, Anggaran_Kalori]) => db.Menu_Harian.push({ Tarikh: t, ID_Menu, Sesi_Makan, Anggaran_Kalori, Disahkan_Oleh: 'Pn. Aisyah (Dietetik)' }));
-    db.Senarai_Catuan.push({ Tarikh: t, ID_Staf: 'S001', Nama_Staf: 'Nur Farhana', Sesi_Catuan: 'Makan Tengah Hari', Status_Tuntut: 'Belum' });
-    db.Senarai_Catuan.push({ Tarikh: t, ID_Staf: 'S001', Nama_Staf: 'Nur Farhana', Sesi_Catuan: 'Makan Malam', Status_Tuntut: 'Belum' });
+      ['M01', 'Makan Tengah Hari', 720], ['M09', 'Makan Tengah Hari', 60], ['M07', 'Minum Petang', 210], ['M08', 'Minum Petang', 150], ['M05', 'Makan Malam', 480], ['M10', 'Makan Malam', 650],
+      ['C01', 'Makan Tengah Hari', 640], ['C02', 'Makan Tengah Hari', 600], ['C03', 'Makan Malam', 620]];
+    // Menu & catuan contoh untuk hari ini dan 2 hari ke hadapan (demo tempahan awal)
+    [0, 1, 2].forEach(n => {
+      const tt = tambahHari(t, n);
+      plan.forEach(([ID_Menu, Sesi_Makan, Anggaran_Kalori]) => {
+        if (!db.Menu_Harian.some(h => h.Tarikh === tt && h.ID_Menu === ID_Menu && h.Sesi_Makan === Sesi_Makan))
+          db.Menu_Harian.push({ Tarikh: tt, ID_Menu, Sesi_Makan, Anggaran_Kalori, Disahkan_Oleh: 'Pn. Aisyah (Dietetik)' });
+      });
+      ['Makan Tengah Hari', 'Makan Malam'].forEach(s => {
+        if (!db.Senarai_Catuan.some(c => c.Tarikh === tt && c.ID_Staf === 'S001' && c.Sesi_Catuan === s))
+          db.Senarai_Catuan.push({ Tarikh: tt, ID_Staf: 'S001', Nama_Staf: 'Nur Farhana', Sesi_Catuan: s, Status_Tuntut: 'Belum' });
+      });
+    });
     // Pesanan contoh supaya label & laporan boleh dicuba terus
     const org = [['S001', 'Nur Farhana', 'Wad 5A'], ['MO1187', 'Dr. Lim Wei Jie', 'Jabatan Kecemasan'], ['X101', 'Siti Khadijah', 'Wad 7B'], ['X102', 'Dr. Arjun Nair', 'ICU'], ['X103', 'Muhammad Hafiz', 'Wad 3C']];
     const contoh = [[0, 'Sarapan', '07:42', [['Roti canai kuah dal', 1, 3], ['Teh tarik kurang manis', 1, 2.5]]], [1, 'Sarapan', '08:05', [['Bubur nasi ayam', 1, 5]]],
@@ -1320,7 +1509,7 @@ const Mock = (() => {
     contoh.forEach(([o, sesi, jam, item, bayar], i) => db.Pesanan_Masuk.push({
       ID_Pesanan: 'P' + t.slice(2).replace(/-/g, '') + '-D' + String(i + 1).padStart(2, '0'), Tarikh_Masa: t + ' ' + jam, ID_Staf: org[o][0], Lokasi_Wad: org[o][2],
       Item_Dipesan: item.map(([n, q]) => n + ' x' + q).join('; '), Jumlah_RM: bayar === 'Catuan' ? 0 : item.reduce((a, [, q, h]) => a + q * h, 0),
-      Jenis_Bayaran: bayar || 'Berbayar', Status_Siap: i < 3 ? 'Dihantar' : i < 5 ? 'Siap' : 'Baru', Sesi_Makan: sesi, Nama_Staf: org[o][1] }));
+      Jenis_Bayaran: bayar || 'Berbayar', Status_Siap: i < 3 ? 'Dihantar' : i < 5 ? 'Siap' : 'Baru', Sesi_Makan: sesi, Nama_Staf: org[o][1], Tarikh_Hidangan: t }));
     ['X101', 'X102', 'X103'].forEach((id, i) => { if (!db.Pengguna.some(u => u.ID_Staf === id)) db.Pengguna.push({ ID_Staf: id, Nama: org[i + 2][1], Peranan: 'STAF', Kata_Laluan: DEMO_KL,
       Lokasi_Wad: org[i + 2][2], Jawatan: 'Jururawat', No_Tel: '01' + (7 + i) + '2233' + (445 + i), Emel: id.toLowerCase() + '@contoh.gov.my', Emel_Disahkan: 'YA', Status_Akaun: 'Aktif', Tarikh_Daftar: t + ' 07:00', Tarikh_Tamat: '', Diluluskan_Oleh: 'setup' }); });
     db.seedTarikh = t; save();
@@ -1329,7 +1518,9 @@ const Mock = (() => {
   const rawak = n => Math.random().toString(36).slice(2, 2 + n).toUpperCase();
   const masa = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()); return hariIni() + ' ' + p; };
   const peta = () => Object.fromEntries(db.Daftar_Menu.map(m => [m.ID_Menu, m]));
-  const denganTel = arr => arr.map(p => ({ ...p, No_Tel: (db.Pengguna.find(u => u.ID_Staf === p.ID_Staf) || {}).No_Tel || '' }));
+  const th = p => p.Tarikh_Hidangan || p.Tarikh_Masa.slice(0, 10);
+  const semakTarikh = t => { const k = hariIni(); if (t < k) ralat('Tidak boleh menempah untuk tarikh yang sudah lepas.'); if (t > tambahHari(k, 7)) ralat('Tempahan hanya dibuka sehingga 7 hari ke hadapan.'); };
+  const denganTel = arr => arr.map(p => ({ ...p, Tarikh_Hidangan: th(p), No_Tel: (db.Pengguna.find(u => u.ID_Staf === p.ID_Staf) || {}).No_Tel || '' }));
   const ralat = m => { throw new Error(m); };
   const PELULUS = ['ADMIN', 'DIETETIK'];
   const statusB = u => (u.Status_Akaun === 'Aktif' && u.Tarikh_Tamat && u.Tarikh_Tamat < hariIni()) ? 'Tamat' : (u.Status_Akaun || 'Menunggu');
@@ -1365,25 +1556,37 @@ const Mock = (() => {
     },
     menuHariIni(d, u) {
       const t = d.tarikh || hariIni(), m = peta();
+      if (u.Peranan === 'STAF') semakTarikh(t);
+      const catuan = u.Peranan === 'STAF' ? db.Senarai_Catuan.filter(c => c.Tarikh === t && c.ID_Staf === u.ID_Staf) : [];
+      const layak = catuan.map(c => c.Sesi_Catuan);
+      const semua = db.Menu_Harian.filter(h => h.Tarikh === t && m[h.ID_Menu]?.Status_Pengesahan === 'Disahkan')
+        .map(h => ({ ...m[h.ID_Menu], Jenis_Menu: m[h.ID_Menu].Jenis_Menu === 'Catuan' ? 'Catuan' : 'Jualan', Sesi_Makan: h.Sesi_Makan, Anggaran_Kalori: h.Anggaran_Kalori }));
       return {
-        tarikh: t,
-        menu: db.Menu_Harian.filter(h => h.Tarikh === t && m[h.ID_Menu]?.Status_Pengesahan === 'Disahkan')
-          .map(h => ({ ...m[h.ID_Menu], Sesi_Makan: h.Sesi_Makan, Anggaran_Kalori: h.Anggaran_Kalori })),
-        catuan: u.Peranan === 'STAF' ? db.Senarai_Catuan.filter(c => c.Tarikh === t && c.ID_Staf === u.ID_Staf) : []
+        tarikh: t, catuan,
+        hariTempahAwal: 7,
+        sesiAdaMenuCatuan: SESI.filter(s => semua.some(x => x.Sesi_Makan === s && x.Jenis_Menu === 'Catuan')),
+        menu: u.Peranan === 'STAF' ? semua.filter(x => x.Jenis_Menu !== 'Catuan' || layak.includes(x.Sesi_Makan)) : semua
       };
+    },
+    simpanMenuCatuan(d) {
+      if (!String(d.Nama_Sajian || '').trim()) ralat('Nama hidangan wajib diisi.');
+      if (d.ID_Menu) { const r = db.Daftar_Menu.find(x => x.ID_Menu === d.ID_Menu && x.Jenis_Menu === 'Catuan') || ralat('Menu catuan tidak dijumpai.'); Object.assign(r, { Nama_Sajian: d.Nama_Sajian.trim(), Kategori: d.Kategori, Keterangan: (d.Keterangan || '').trim() }); return r; }
+      const r = { ID_Menu: 'C' + Date.now().toString(36).toUpperCase(), Nama_Sajian: d.Nama_Sajian.trim(), Harga_RM: 0, Kategori: d.Kategori, Status_Pengesahan: 'Disahkan', Jenis_Menu: 'Catuan', Keterangan: (d.Keterangan || '').trim() };
+      db.Daftar_Menu.push(r); return r;
     },
     daftarMenu: () => db.Daftar_Menu,
     simpanMenu(d) {
+      if (d.ID_Menu && peta()[d.ID_Menu]?.Jenis_Menu === 'Catuan') ralat('Menu catuan hanya boleh diubah oleh Pegawai Dietetik.');
       if (!String(d.Nama_Sajian || '').trim()) ralat('Nama sajian wajib diisi.');
       const h = Number(d.Harga_RM); if (isNaN(h) || h < 0) ralat('Harga tidak sah.');
       if (d.ID_Menu) { const r = db.Daftar_Menu.find(x => x.ID_Menu === d.ID_Menu); Object.assign(r, { Nama_Sajian: d.Nama_Sajian.trim(), Harga_RM: h, Kategori: d.Kategori, Status_Pengesahan: 'Draf' }); return r; }
-      const r = { ID_Menu: 'M' + Date.now().toString(36).toUpperCase(), Nama_Sajian: d.Nama_Sajian.trim(), Harga_RM: h, Kategori: d.Kategori, Status_Pengesahan: 'Draf' };
+      const r = { ID_Menu: 'M' + Date.now().toString(36).toUpperCase(), Nama_Sajian: d.Nama_Sajian.trim(), Harga_RM: h, Kategori: d.Kategori, Status_Pengesahan: 'Draf', Jenis_Menu: 'Jualan', Keterangan: '' };
       db.Daftar_Menu.push(r); return r;
     },
     sahkanMenu(d) { const r = db.Daftar_Menu.find(x => x.ID_Menu === d.ID_Menu) || ralat('Menu tidak dijumpai.'); r.Status_Pengesahan = d.status; return r; },
     menuHarian(d) {
       const m = peta();
-      return db.Menu_Harian.filter(h => h.Tarikh === d.tarikh).map(h => ({ ...h, Nama_Sajian: m[h.ID_Menu]?.Nama_Sajian || '(menu dipadam)', Harga_RM: m[h.ID_Menu]?.Harga_RM || 0, Status_Pengesahan: m[h.ID_Menu]?.Status_Pengesahan || '' }));
+      return db.Menu_Harian.filter(h => h.Tarikh === d.tarikh).map(h => ({ ...h, Nama_Sajian: m[h.ID_Menu]?.Nama_Sajian || '(menu dipadam)', Harga_RM: m[h.ID_Menu]?.Harga_RM || 0, Jenis_Menu: m[h.ID_Menu]?.Jenis_Menu || 'Jualan', Status_Pengesahan: m[h.ID_Menu]?.Status_Pengesahan || '' }));
     },
     tambahMenuHarian(d, u) {
       const k = Number(d.Anggaran_Kalori); if (isNaN(k) || k < 0) ralat('Anggaran kalori tidak sah.');
@@ -1462,33 +1665,44 @@ const Mock = (() => {
       db.Senarai_Catuan.splice(db.Senarai_Catuan.indexOf(c), 1); return true;
     },
     buatPesanan(d, u) {
-      const t = hariIni(), jenis = d.Jenis_Bayaran === 'Catuan' ? 'Catuan' : 'Berbayar';
+      const t = d.tarikh || hariIni(), jenis = d.Jenis_Bayaran === 'Catuan' ? 'Catuan' : 'Berbayar'; semakTarikh(t);
       if (!String(d.Lokasi_Wad || '').trim()) ralat('Isi lokasi atau wad penghantaran.');
-      const ada = Object.fromEntries(F.menuHariIni({ tarikh: t }, u).menu.filter(m => m.Sesi_Makan === d.sesi).map(m => [m.ID_Menu, m]));
-      let jumlah = 0, bil = 0;
-      const baris = d.items.map(it => { const m = ada[it.ID_Menu] || ralat('Ada item yang tiada lagi dalam menu. Muat semula menu.'); jumlah += m.Harga_RM * it.qty; bil += it.qty; return m.Nama_Sajian + ' x' + it.qty; });
+      const mh = F.menuHariIni({ tarikh: t }, u);
+      const ada = Object.fromEntries(mh.menu.filter(m => m.Sesi_Makan === d.sesi).map(m => [m.ID_Menu, m]));
+      let jumlah = 0, bil = 0, aC = false, aJ = false;
+      const baris = d.items.map(it => { const m = ada[it.ID_Menu] || ralat('Ada item yang tiada lagi dalam menu. Muat semula menu.'); if (m.Jenis_Menu === 'Catuan') aC = true; else aJ = true; jumlah += m.Harga_RM * it.qty; bil += it.qty; return m.Nama_Sajian + ' x' + it.qty; });
+      if (aC && aJ) ralat('Menu catuan dan menu jualan perlu dipesan secara berasingan.');
+      if (aC && jenis !== 'Catuan') ralat('Menu catuan hanya boleh dipesan menggunakan catuan.');
+      if (jenis === 'Catuan' && aJ && mh.sesiAdaMenuCatuan.includes(d.sesi)) ralat('Catuan untuk sesi ini hanya boleh digunakan untuk menu catuan.');
       if (jenis === 'Catuan') {
         if (bil > CATUAN_MAX_HIDANGAN) ralat('Catuan meliputi ' + CATUAN_MAX_HIDANGAN + ' hidangan sahaja.');
         const c = db.Senarai_Catuan.find(x => x.Tarikh === t && x.ID_Staf === u.ID_Staf && x.Sesi_Catuan === d.sesi && x.Status_Tuntut !== 'Dituntut') || ralat('Tiada catuan aktif untuk sesi ini.');
         c.Status_Tuntut = 'Dituntut'; jumlah = 0;
       }
-      const p = { ID_Pesanan: 'P' + t.slice(2).replace(/-/g, '') + '-' + rawak(4), Tarikh_Masa: masa(), ID_Staf: u.ID_Staf, Lokasi_Wad: d.Lokasi_Wad.trim(),
-        Item_Dipesan: baris.join('; '), Jumlah_RM: Math.round(jumlah * 100) / 100, Jenis_Bayaran: jenis, Status_Siap: 'Baru', Sesi_Makan: d.sesi, Nama_Staf: u.Nama };
+      const p = { ID_Pesanan: 'P' + hariIni().slice(2).replace(/-/g, '') + '-' + rawak(4), Tarikh_Masa: masa(), ID_Staf: u.ID_Staf, Lokasi_Wad: d.Lokasi_Wad.trim(),
+        Item_Dipesan: baris.join('; '), Jumlah_RM: Math.round(jumlah * 100) / 100, Jenis_Bayaran: jenis, Status_Siap: 'Baru', Sesi_Makan: d.sesi, Nama_Staf: u.Nama, Tarikh_Hidangan: t };
       db.Pesanan_Masuk.push(p); return p;
     },
     pesananSaya: (d, u) => db.Pesanan_Masuk.filter(p => p.ID_Staf === u.ID_Staf).slice().reverse().slice(0, 30),
-    pesananMasuk: d => denganTel(db.Pesanan_Masuk.filter(p => p.Tarikh_Masa.startsWith(d.tarikh || hariIni()))),
+    pesananMasuk: d => denganTel(db.Pesanan_Masuk.filter(p => th(p) === (d.tarikh || hariIni()))),
+    senaraiLokasi: () => db.Senarai_Lokasi,
+    simpanLokasi(d) {
+      const nama = String(d.Lokasi || '').trim(); if (!nama) ralat('Isi nama lokasi.');
+      const r = db.Senarai_Lokasi.find(l => l.Lokasi.toLowerCase() === nama.toLowerCase());
+      if (r) { if (d.Aktif === undefined) ralat('Lokasi ini sudah ada.'); r.Aktif = !!d.Aktif; return true; }
+      db.Senarai_Lokasi.push({ Lokasi: nama, Kategori: d.Kategori || 'Wad', Aktif: true }); return true;
+    },
     laporanPesanan(d) {
       if (d.hingga < d.dari) ralat('Tarikh akhir mesti selepas tarikh mula.');
-      return denganTel(db.Pesanan_Masuk.filter(p => { const t = p.Tarikh_Masa.slice(0, 10); return t >= d.dari && t <= d.hingga && (d.sesi === 'Semua' || p.Sesi_Makan === d.sesi); }));
+      return denganTel(db.Pesanan_Masuk.filter(p => { const t = th(p); return t >= d.dari && t <= d.hingga && (d.sesi === 'Semua' || p.Sesi_Makan === d.sesi); }));
     },
     kemaskiniPesanan(d) { const p = db.Pesanan_Masuk.find(x => x.ID_Pesanan === d.ID_Pesanan) || ralat('Pesanan tidak dijumpai.'); p.Status_Siap = d.Status_Siap; return p; }
   };
   const PERANAN_DIBENAR = {
     daftarMenu: ['PENGUSAHA', 'DIETETIK'], simpanMenu: ['PENGUSAHA'], sahkanMenu: ['DIETETIK'], menuHarian: ['DIETETIK'], tambahMenuHarian: ['DIETETIK'],
-    buangMenuHarian: ['DIETETIK'], senaraiStaf: ['DIETETIK'], catuan: ['DIETETIK'], tambahCatuan: ['DIETETIK'], buangCatuan: ['DIETETIK'],
+    buangMenuHarian: ['DIETETIK'], simpanMenuCatuan: ['DIETETIK'], senaraiStaf: ['DIETETIK'], catuan: ['DIETETIK'], tambahCatuan: ['DIETETIK'], buangCatuan: ['DIETETIK'],
     senaraiPengguna: PELULUS, kemaskiniPengguna: PELULUS, janaKataLaluan: PELULUS,
-    buatPesanan: ['STAF'], pesananSaya: ['STAF'], pesananMasuk: ['PENGUSAHA'], kemaskiniPesanan: ['PENGUSAHA'], laporanPesanan: ['DIETETIK', 'ADMIN']
+    buatPesanan: ['STAF'], pesananSaya: ['STAF'], pesananMasuk: ['PENGUSAHA'], kemaskiniPesanan: ['PENGUSAHA'], laporanPesanan: ['DIETETIK', 'ADMIN'], simpanLokasi: ['ADMIN']
   };
 
   if (!db) seed();
