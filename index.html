@@ -667,7 +667,7 @@ async function paparTetapanTempahan() {
   const kategori = [...new Set(aktif.map(l => l.Kategori))];
   const opt = v => `<option value="${esc(v)}" ${v === pilihL ? 'selected' : ''}>${esc(v)}</option>`;
   $('#main').innerHTML = `
-    <section class="kepala"><p>Sebelum memilih menu</p><h1>Tempah untuk bila, hantar ke mana?</h1></section>
+    <section class="kepala"><p>Sebelum memilih menu</p><h1>Sila Pilih Tarikh dan Lokasi Penghantaran</h1></section>
     <form class="borang" id="fTetapan">
       <b>Tarikh hidangan</b>
       <div class="pilih-hari" role="radiogroup" aria-label="Tarikh hidangan">${hari.map((t, i) => `<label>
